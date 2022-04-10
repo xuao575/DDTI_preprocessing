@@ -65,10 +65,11 @@ def main():
                     thy.remove_border()
                     thy.save()
 
-                    item = f'{thy.filename}_{thy.number}({thy.part})'
+                    item = f'{splitext(thy.filename)[0]}({thy.part})'
                     csv_writer.writerow((item, thy.tirads))
                     print(f'{item} has been saved')
     f.close()
+
 
 if __name__ == '__main__':
     main()

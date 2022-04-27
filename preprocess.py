@@ -5,8 +5,9 @@ from os.path import splitext, basename
 import json
 from thyroid import Thyroid
 import csv
+from tqdm import tqdm
 
-data_dir = Path('./thyroid')
+data_dir = Path('./archive')
 out_dir = Path('./cropped')
 mask_dir = Path('./mask')
 
@@ -26,51 +27,60 @@ def main():
     f = open('diagnosis.csv', 'w', newline='')
     csv_writer = csv.writer(f)
 
-    for file in files:
-        tree = ElementTree.parse(data_dir / file)
-        root = tree.getroot()
+    with tqdm(total=len(files)) as pbar:
+        for file in files:
+            tree = ElementTree.parse(data_dir / file)
+            root = tree.getroot()
 
-        number = int(list(root.iter(tag='number'))[0].text)
-        tirads = list(root.iter(tag='tirads'))[0].text
+            number = int(list(root.iter(tag='number'))[0].text)
+            tirads = list(root.iter(tag='tirads'))[0].text
 
-        marks = list(root.iter(tag='mark'))
-        for mark in marks:
-            # for nodule in one image / one image contains one or two nodules
-            subscript = int(list(mark.iter(tag='image'))[0].text)
+            marks = list(root.iter(tag='mark'))
+            for mark in marks:
+                # for nodule in one image / one image contains one or two nodules
+                subscript = int(list(mark.iter(tag='image'))[0].text)
 
-            svg_ = list(mark.iter(tag='svg'))[0].text
-            svgs = []
-            try:
-                svgs = json.loads(svg_)  # list
-            except:
-                continue
-            finally:
-                nod_num = len(svgs)
-                if nod_num != 1:
-                    nod_num = 2
+                svg_ = list(mark.iter(tag='svg'))[0].text
+                svgs = []
+                try:
+                    svgs = json.loads(svg_)  # list
+                except:
+                    continue
+                finally:
+                    nod_num = len(svgs)
+                    if nod_num != 1:
+                        nod_num = 2
 
-                for i, svg in enumerate(svgs):
-                    points = svg['points']
-                    thy = Thyroid(filename=file,
-                                  number=number,
-                                  subscript=subscript,
-                                  tirads=tirads,
-                                  points=points,
-                                  nod_num=nod_num,
-                                  part=i+1)
-                    thy.draw_mask()
-                    thy.resize_nodule()
-                    thy.fill_bfs()
-                    thy.erode_dilate()
-                    thy.remove_border()
-                    thy.save()
+                    for i, svg in enumerate(svgs):
+                        points = svg['points']
+                        thy = Thyroid(filename=file,
+                                      number=number,
+                                      subscript=subscript,
+                                      tirads=tirads,
+                                      points=points,
+                                      nod_num=nod_num,
+                                      part=i+1)
+                        thy.draw_mask()
+                        thy.resize_nodule()
+                        thy.fill_bfs()
+                        thy.erode_dilate()
+                        thy.remove_border()
+                        thy.save()
 
-                    if thy.nod_num == 2:
-                        item = f'{splitext(thy.filename)[0]}({thy.part})'
-                    else:
-                        item = f'{splitext(thy.filename)[0]}'
-                    csv_writer.writerow((item, thy.tirads))
-                    print(f'{item} has been saved')
+                        if thy.nod_num == 2:
+                            item = f'{splitext(thy.filename)[0]}({thy.part})'
+                        else:
+                            item = f'{splitext(thy.filename)[0]}'
+
+                        label = thy.tirads
+                        bi_label = ''
+                        if label in ['1', '2', '3']:
+                            bi_label = 0
+                        elif label in ['4a', '4b', '4c', '5', '6']:
+                            bi_label = 1
+
+                        csv_writer.writerow((item, str(thy.tirads), bi_label))
+            pbar.update(1)
     f.close()
 
 

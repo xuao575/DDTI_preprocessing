@@ -1,4 +1,4 @@
-<img src="cropped/122_2(1).png" width="180" height="180"><img src="mask/122_2(1).gif" width="180" height="180">
+<img src="fig/3_1.png" width="180" height="180"><img src="fig/3_1.gif" width="180" height="180">
 
 1. Split nodules when two nodules in an image.
 2. Generate corresponding masks.
